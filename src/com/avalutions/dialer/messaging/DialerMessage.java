@@ -1,47 +1,82 @@
 package com.avalutions.dialer.messaging;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class DialerMessage {
     
-    private String _message = null;
-    private List<String> _segments;
-
-    //MessageHeader Header { get; set; }
-    public String getMessage() {
-        return _message;
-    }
+    private String message = null;
+    private List<String> segments;
+    private MessageHeader header;
     
-    public boolean getIsError() {
-        if (_segments != null)
-            return _segments.get(1).startsWith("E");
+    public String getMessage() {
+		return message;
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	public List<String> getSegments() {
+		return segments;
+	}
+
+	public void setSegments(List<String> segments) {
+		this.segments = segments;
+	}
+
+	public MessageHeader getHeader() {
+		return header;
+	}
+
+	public void setHeader(MessageHeader header) {
+		this.header = header;
+	}
+
+	public boolean getIsError() {
+        if (segments != null)
+            return segments.get(1).startsWith("E");
         else
             return false;
-    }
-    
-    public void setIsError(boolean isError) {
     }
     
     protected void parse(List<String> segments) { }
 
     public static DialerMessage fromRaw(String data)
     {
-        MessageHeader header = MessageHeader.FromString(data.Substring(0, 55));
+        MessageHeader header = MessageHeader.FromString(data.substring(0, 55));
         DialerMessage result = null;
-        String[] segments = data.Substring(56).Split((char)MessageSeperator.Delimiter);
-        Array.ForEach(segments, a => a = a.Replace(((char)MessageSeperator.Delimiter).ToString(), ""));
-        string typeName = "Dialer.Communication.Messages." + header.Name.Replace("AGT", "");
-        if (Type.GetType(typeName) != null && header.Type == MessageType.Data)
-        {
-            ConstructorInfo ci = Type.GetType(typeName).GetConstructor(Type.EmptyTypes);
-            result = ci.Invoke(null) as DialerMessage;
+        String[] segments = data.substring(56).split(String.valueOf(MessageSeperator.Delimiter.getCharacter()));
+        for(String segment : segments) {
+        	segment = segment.replace(String.valueOf(MessageSeperator.Delimiter.getCharacter()), "");
         }
+        
+        String typeName = "com.avalutions.dialer.messaging." + header.getName().replace("AGT", "");
+        Class c = null;
+		try {
+			c = Class.forName(typeName);
+	        if (c != null && header.getType() == MessageType.Data)
+	        {
+	        	return (DialerMessage) c.newInstance();
+	        }
         else
             result = new DialerMessage();
-        result.Header = header;
-        result.Message = data;
-        result.Segments = segments.ToList();
-        result.Parse(segments.Skip(2).ToList());
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        result.setHeader(header);
+        result.setMessage(data);
+        List<String> sl = Arrays.asList(segments);
+        result.setSegments(sl);
+        result.parse(sl);
         return result;
     }
 
