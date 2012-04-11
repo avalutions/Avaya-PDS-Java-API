@@ -10,7 +10,7 @@ public class DataField extends Field {
     private String type;
     private List<String> possibleValues;
     
-	public DataField(String name, int xPosition, int yPosition, int width, String type) {
+	public DataField(String name, Integer xPosition, Integer yPosition, int width, String type) {
 		super(name, xPosition, yPosition, width);
 		this.type = type;
 		this.possibleValues = new ArrayList<String>();
