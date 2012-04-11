@@ -15,6 +15,11 @@ public class DataField extends Field {
 		this.type = type;
 		this.possibleValues = new ArrayList<String>();
 	}
+    
+	public DataField(String name, Integer xPosition, Integer yPosition, int width, String type, String value) {
+		this(name, xPosition, yPosition, width, type);
+		this.value = value;
+	}
 	
 	public void addPossibleValue(String value) {
 		possibleValues.add(value);
