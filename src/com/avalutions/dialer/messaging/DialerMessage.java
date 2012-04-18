@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class DialerMessage {
+public class DialerMessage implements Message {
     
     private String message = null;
     private List<String> segments;
@@ -34,7 +34,7 @@ public class DialerMessage {
 		this.header = header;
 	}
 
-	public boolean getIsError() {
+	public boolean isError() {
         if (segments != null)
             return segments.get(1).startsWith("E");
         else

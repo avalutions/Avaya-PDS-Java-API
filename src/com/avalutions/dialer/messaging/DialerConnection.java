@@ -5,6 +5,7 @@ import java.util.*;
 
 public class DialerConnection {
 	private DialerSocket socket;
+	private List<MessageHandler> handlers = new ArrayList<MessageHandler>();
 
     private boolean handleError(DialerMessage response)
     {
@@ -26,6 +27,78 @@ public class DialerConnection {
 
         return false;
     }
+    
+
+    /// <summary>
+    /// A notification was received from the dialer so handle which kind.
+    /// </summary>
+    /// <param name="response">The structured data received from the dialer</param>
+    /// <returns>Whether the notification was handled or not</returns>
+    private boolean handleNotification(DialerMessage response)
+    {
+        boolean handled = true;
+
+        //The agent hung up the headset without logging off
+        if (response.getHeader().getName() == "AGTHeadsetConnBroken")
+        {
+            //Bubble the message to the presentation layer
+            onNewMessage("NOTICE: Headset connection broke.  Logoff process beginning.", false);
+            //Start the logoff process
+            //Agent.MoveToState(AgentState.LoggedOff, true);
+        }
+        //An information message was received from the supervisor.  This is not a system message delivery mechanism
+        else if (response.getHeader().getName() == "AGTReceiveMessage")
+        {
+            //Bubble the message to the presentation layer
+        	onNewMessage("NOTICE: New message from supervisor to follow.", false);
+            //Pull out the actual message received
+        	onNewMessage(response.Segments.ToList()[1], false);
+        }
+        //The job we are currently attached to is ending.  Begin detach process
+        else if (response.getHeader().getName() == "AGTJobEnd")
+        {
+            //Bubble the message to the presentation layer
+        	onNewMessage("NOTICE: The current job has ended.", false);
+            //Start the detach process
+            //Agent.MoveToState(AgentState.LoggedOn, true);
+        }
+        //System error received.  This is usually detramental
+        else if (response.getHeader().getName() == "AGTSystemError")
+        {
+            //Pull out the message the dialer is sending
+            String message = response.getSegments().get(1);
+
+            //Bubble the message to the user
+            onNewMessage("NOTICE: System error reported. Message to follow.", false);
+            onNewMessage(message, true);
+
+            //Check to see if it was a command that failed.
+            Command pendingCommand = null;
+            lock (((ICollection)_waitingCommands).SyncRoot)
+                pendingCommand = _waitingCommands.FirstOrDefault(c => message.Contains(c.Header.Name));
+            //If so, end the command
+            if (pendingCommand != null)
+                pendingCommand.Finished.Set();
+        }
+        else if (response.Header.Name == "AGTAutoReleaseLine")
+        {
+            OnNewMessage("The line has been disconnected.", false);
+            Agent.MoveToState(AgentState.Disconnected);
+        }
+        //A new call was received in the format expected
+        else if (response.Header.Name == "AGTCallNotify")
+        {
+            OnNewMessage(response);
+            if (response.Segments[1] == "M00000")
+                OnNewMessage("NOTICE: Call received", false);
+        }
+        //We dont have a method for handling the notification so indicate that
+        else
+            handled = false;
+
+        //Return if we handled the notification or not
+        return handled;
+    }
 	
 	void messageReceived(String message) {
 		DialerMessage response = DialerMessage.fromRaw(message);
@@ -36,7 +109,7 @@ public class DialerConnection {
         if (response != null && response.getSegments().size() >= 2)
         {
             //If it's a notification, handle the notification
-            if (response.Header.Type == Messages.MessageType.Notification)
+            if (response.getHeader().getType() == MessageType.Notification)
                 HandleNotification(response);
             //If it's a response to a command sent, handle it
             else if (response.Header.Type == Messages.MessageType.Response)
