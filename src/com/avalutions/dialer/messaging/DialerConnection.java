@@ -2,8 +2,12 @@ package com.avalutions.dialer.messaging;
 
 import java.util.*;
 
+import org.apache.log4j.Logger;
+
 
 public class DialerConnection {
+	private Logger logger = Logger.getLogger(getClass());
+	
 	private DialerSocket socket;
 	private List<MessageHandler> handlers = new ArrayList<MessageHandler>();
 	private Queue<Message> pendingMessages;
@@ -43,23 +47,25 @@ public class DialerConnection {
         if (response.getHeader().getName() == "AGTHeadsetConnBroken")
         {
             //Bubble the message to the presentation layer
-            onNewMessage("NOTICE: Headset connection broke.  Logoff process beginning.", false);
+            logger.warn("NOTICE: Headset connection broke.  Logoff process beginning.");
             //Start the logoff process
+            //TODO: This should be handled outside of the connection.  Maybe, at most, the state of the connection should change?
             //Agent.MoveToState(AgentState.LoggedOff, true);
         }
         //An information message was received from the supervisor.  This is not a system message delivery mechanism
         else if (response.getHeader().getName() == "AGTReceiveMessage")
         {
             //Bubble the message to the presentation layer
-        	onNewMessage("NOTICE: New message from supervisor to follow.", false);
+        	logger.info("NOTICE: New message from supervisor to follow.");
             //Pull out the actual message received
-        	onNewMessage(response.getSegments().get(1), false);
+        	logger.trace(response.getSegments().get(1));
+        	//onNewMessage(response.getSegments().get(1), false);
         }
         //The job we are currently attached to is ending.  Begin detach process
         else if (response.getHeader().getName() == "AGTJobEnd")
         {
             //Bubble the message to the presentation layer
-        	onNewMessage("NOTICE: The current job has ended.", false);
+        	logger.warn("NOTICE: The current job has ended.");
             //Start the detach process
             //Agent.MoveToState(AgentState.LoggedOn, true);
         }
@@ -70,7 +76,7 @@ public class DialerConnection {
             String message = response.getSegments().get(1);
 
             //Bubble the message to the user
-            onNewMessage("NOTICE: System error reported. Message to follow.", false);
+            logger.warn("NOTICE: System error reported. Message to follow.");
             onNewMessage(message, true);
 
             //Check to see if it was a command that failed.
@@ -80,7 +86,7 @@ public class DialerConnection {
         }
         else if (response.getHeader().getName() == "AGTAutoReleaseLine")
         {
-            onNewMessage("The line has been disconnected.", false);
+            logger.warn("The line has been disconnected.");
             //Agent.MoveToState(AgentState.Disconnected);
         }
         //A new call was received in the format expected
@@ -88,7 +94,7 @@ public class DialerConnection {
         {
             onNewMessage(response);
             if (response.getSegments().get(1) == "M00000")
-                onNewMessage("NOTICE: Call received", false);
+                logger.info("NOTICE: Call received");
         }
         //We dont have a method for handling the notification so indicate that
         else
