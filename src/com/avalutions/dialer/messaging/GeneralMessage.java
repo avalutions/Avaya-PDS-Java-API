@@ -13,12 +13,10 @@ public class GeneralMessage implements Message {
 		this.isError = isError;
 	}
 
-	@Override
 	public String getMessage() {
 		return message;
 	}
 
-	@Override
 	public boolean isError() {
 		return isError;
 	}
